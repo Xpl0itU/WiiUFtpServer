@@ -205,50 +205,6 @@ char* virtualToVolPath(char *vPath) {
     return "";
 }
 
-/* 
-#ifdef LOG2FILE
-void displayConnectionDetails(uint32_t index) {
-
-    writeToLog("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-    writeToLog("Connection %d ", index);
-    writeToLog("------------------------------");
-
-    if (index == 0) {
-        writeToLog("socket                     = %d", connections[index]->socket);
-        writeToLog("representation_type        = %c", connections[index]->representation_type);
-        writeToLog("pending_rename             = %c", connections[index]->pending_rename);
-        writeToLog("authenticated              = %d", connections[index]->authenticated);
-    }
-
-    writeToLog("cwd                        = %s", connections[index]->cwd);
-    writeToLog("offset                     = %d", connections[index]->offset);
-    writeToLog("passive_socket             = %d", connections[index]->passive_socket);
-
-    writeToLog("data_socket                = %d", connections[index]->data_socket);
-    writeToLog("restart_marker             = %d", connections[index]->restart_marker);
-    writeToLog("data_connection_connected  = %d", connections[index]->data_connection_connected);
-    writeToLog("data_connection_timer      = %d", connections[index]->data_connection_timer);
-
-    if (connections[index]->f != NULL) {
-        writeToLog("filename                   = %s", connections[index]->fileName);
-        writeToLog("fd                         = %d", fileno(connections[index]->f));
-        writeToLog("volPath                    = %s", connections[index]->volPath);
-        writeToLog("dataTransferOffset         = %d", connections[index]->dataTransferOffset);
-        writeToLog("speed                      = %.2f", connections[index]->speed);
-        writeToLog("bytesTransferred            = %d", connections[index]->bytesTransferred);
-
-    }
-
-    writeToLog("Number of avg files used   = %d", nbSpeedMeasures);
-    writeToLog("Sum of speed rate          = %.2f", sumAvgSpeed);
-
-    writeToLog("Max transfer speed         = %.2f", maxTransferRate);
-    writeToLog("Min transfer speed         = %.2f", minTransferRate);
-
-}
-#endif
-*/
-
 int launchTransfer(int argc UNUSED, const char **argv)
 {
         

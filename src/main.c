@@ -39,12 +39,12 @@
 #include "ftp.h"
 #include "virtualpath.h"
 #include "net.h"
-#include "nandBackup.h"
 #include "controllers.h"
 #include "spinlock.h"
 
 // return code
-#define EXIT_SUCCESS        0
+#define EXIT_SUCCESS                        0
+#define FS_MAX_LOCALPATH_SIZE               511
 
 typedef enum
 {
@@ -62,9 +62,6 @@ typedef enum
 
 // Wii-U date (GMT) %02d/%02d/%04d %02d:%02d:%02d
 static char sessionDate[40] = "";
-
-// path used to check if a NAND backup exists on SDCard
-static const char backupCheck[FS_MAX_LOCALPATH_SIZE] = "sd:/wiiu/apps/WiiUFtpServer/NandBackup/storage_slc/proc/prefs/nn.xml";
 
 // gamepad inputs
 static VPADStatus vpadStatus;
@@ -237,43 +234,6 @@ static void cls() {
 //--------------------------------------------------------------------------
 static bool isChannel() {
     return OSGetTitleID() == 0x0005000010050421;
-}
-
-//--------------------------------------------------------------------------
-static void displayCrcWarning() {
-    cls();
-    display("!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!");
-    display("");
-    display("You have chosen to mount system paths, and CRC32 calculation");
-    display("is disabled!");
-    display("");
-    display("If you transfer critical files (such as system ones), you'd");
-    display("better verify the integrity of the files transferred using");
-    display("a CRC check espcially if you're using WIFI and not Ethernet");
-    display("");
-    display("You can toggle it at anytime during the session with 'X'");
-    display("");
-    display("Then use the CrcChecker to check your files afterward.");
-    display("(available in WiiUFtpServer HBL app subfolder on the SDcard)");
-    display("");
-    display("");
-
-    display("Press A or B button to continue (timeout in 10 sec)");
-	
-    bool buttonPressed = false;
-    int cpt = 0;
-    while (!buttonPressed && (cpt < 300))
-    {
-        listenControlerEvent(&vpadStatus);
-        
-        // check A/B button pressed and/or hold
-        if ( ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_A) | \
-             ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_B) ) buttonPressed = true;
-			 
-        OSSleepTicks(OSMillisecondsToTicks(1));
-		cpt+=1;
-	}	
-    cls();
 }
 
 //--------------------------------------------------------------------------
@@ -518,69 +478,7 @@ int main()
     }
 #endif
 
-    cls();
-    display("Please PRESS : (timeout in 10 sec)");
-	display(" ");
-    if (autoShutDown) {
-        display("   > DOWN, toggle auto shutdown (currently enabled)");
-    }
-    display("   > UP, toggle verbose mode (OFF by default)");
-    display("   > A, for only USB and SDCard (default after timeout)");
-    display("   > B, mount ALL paths");
-    display("   > X, toogle CRC32-C calculation (OFF by default)");
-    if (!autoShutDown) {
-        display(" ");
-    }
-
-    bool buttonPressed = false;
-    int cpt=0;
-    while (!buttonPressed && (cpt < 400))
-    {
-        listenControlerEvent(&vpadStatus);
-
-        // check button pressed and/or hold
-        if ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_A) buttonPressed = true;
-        if ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_B) {
-            mountMlc = true;
-            buttonPressed = true;
-        }
-        if ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_UP) {
-            if (verboseMode) {
-                display("(verbose mode OFF)");
-                verboseMode = false;
-            } else {
-                display("(verbose mode ON)");
-                verboseMode = true;
-            }
-            OSSleepTicks(OSMillisecondsToTicks(500));
-        }
-        if ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_X) {
-            if (calculateCrc32) {
-                display("(disable CRC32 computation)");
-                calculateCrc32 = false;
-            } else {
-                display("(enable CRC32 computation)");
-                calculateCrc32 = true;
-            }
-            OSSleepTicks(OSMillisecondsToTicks(500));
-        }
-        if ((vpadStatus.trigger | vpadStatus.hold) & VPAD_BUTTON_DOWN) {
-            if (autoShutDown) {
-                display("(auto-shutdown OFF)");
-                IMDisableAPD(); // Disable auto-shutdown feature
-				autoShutDown = 0;
-            } else {
-                display("(auto-shutdown ON)");
-                IMEnableAPD(); // Disable auto-shutdown feature
-				autoShutDown = 1;
-            }
-            OSSleepTicks(OSMillisecondsToTicks(500));
-        }
-
-        OSSleepTicks(OSMillisecondsToTicks(1));
-        cpt = cpt+1;
-
-    }
+    mountMlc = true;
 
     display(" ");
     int nbDrives=MountVirtualDevices(mountMlc);
@@ -610,61 +508,10 @@ int main()
     display(" ");
     display("Starting network and create server...");
     display(" ");
-
-    // if mountMlc, check that a NAND backup exists, ask to create one otherwise
-    bool backupExist = (access(backupCheck, F_OK) == 0);
-    if (mountMlc) {
-        if (!backupExist) {            
-            fatUnmount("sd");            
-            IOSUHAX_FSA_Mount(fsaFd, "/dev/sdcard01", "/vol/storage_sdcard", 2, (void*)0, 0);
-
-            mount_fs("storage_sdcard", fsaFd, NULL, "/vol/storage_sdcard");
-            
-            cls();
-            display("!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!");
-            display(" ");
-            display("No NAND backup was found !");
-            display(" ");
-            display("There's always a risk of brick");
-            display("(specially if you edit system files from your FTP client)");
-            display(" ");
-            display(" ");
-            display("Create a complete system (press A) or partial (B) backup?");
-            display(" ");
-            display("- COMPLETE system requires 500MB free space on SD card !");
-            display("- PARTIAL one will be only used to unbrick the Wii-U network");
-            display("  in order to start WiiUFtpServer");
-            display(" ");
-            if (readUserAnswer(&vpadStatus)) {
-                display("Creating FULL NAND backup...");
-                createNandBackup(1);
-                display("");
-                display("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            } else {
-                display("Creating partial NAND backup...");
-                createNandBackup(0);
-                display("");
-                display("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                display("This backup is only a PARTIAL one used to unbrick");
-                display("the Wii-U network in order to start WiiUFtpServer");
-                display("");
-                display("It is highly recommended to create a FULL backup");
-                display("on your own");
-            }
-
-            display("");
-            display("Press A or B button to continue");
-            display("");
-            readUserAnswer(&vpadStatus);
-            cls();
-            unmount_fs("storage_sdcard");
-            IOSUHAX_FSA_FlushVolume(fsaFd, "/vol/storage_sdcard");
-                        
-            fatMountSimple("sd", &IOSUHAX_sdio_disc_interface);
-            ResetVirtualPaths();    
-            
-        }
-        if (!calculateCrc32) displayCrcWarning();
+    
+    if (mountMlc) {           
+        fatMountSimple("sd", &IOSUHAX_sdio_disc_interface);
+        ResetVirtualPaths();
     }
 
     /*--------------------------------------------------------------------------*/
@@ -697,36 +544,7 @@ int main()
         display(" ");
         display("! ERROR : network is OFF on the wii-U, FTP is impossible");
         display(" ");
-        if (backupExist) {
-            display("If you have already checked the Network connection to the WIi-U");
-            display("Do you want to restore the partial NAND backup?");
-            display(" ");
-            display("Press A for YES, B for NO ");
-            display("");
-            if (readUserAnswer(&vpadStatus)) {
-                display("NAND backup will be restored, please confirm");
-                display("");
-                fatUnmount("sd");                 
-                IOSUHAX_FSA_Mount(fsaFd, "/dev/sdcard01", "/vol/storage_sdcard", 2, (void*)0, 0);
-                mount_fs("storage_sdcard", fsaFd, NULL, "/vol/storage_sdcard");
-                
-                if (readUserAnswer(&vpadStatus)) restoreNandBackup();
-                display("");
-                
-                // reboot
-                display("Shutdowning...");
-                OSSleepTicks(OSMillisecondsToTicks(2000));
-                OSDynLoad_Module coreinitHandle = NULL;
-                int32_t (*OSShutdown)(int32_t status);
-                OSDynLoad_Acquire("coreinit.rpl", &coreinitHandle);
-                OSDynLoad_FindExport(coreinitHandle, FALSE, "OSShutdown", (void **)&OSShutdown);
-                OSDynLoad_Release(coreinitHandle);
-                OSShutdown(1);
-                goto exit;
-            }
-        } else {
-            display("! ERROR : Can't start the FTP server, exiting");
-        }
+        display("! ERROR : Can't start the FTP server, exiting");
         display("");
     }
 
@@ -753,7 +571,6 @@ int main()
     }
     
     bool userExitRequest = false;
-    cpt=0;
     while (!networkDown && !userExitRequest)
     {
         networkDown = process_ftp_events();

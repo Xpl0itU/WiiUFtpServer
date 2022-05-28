@@ -1,0 +1,7 @@
+*.rpx
+*.elf
+.vscode
+*.o
+*.d
+*.lst
+*.map

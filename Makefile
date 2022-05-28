@@ -9,8 +9,8 @@ endif
 
 TOPDIR ?= $(CURDIR)
 WUT_ROOT := $(DEVKITPRO)/wut
-IOSUHAX_ROOT := $(DEVKITPRO)/iosuhax
-FAT_ROOT := $(DEVKITPRO)/fat
+IOSUHAX_ROOT := $(DEVKITPRO)/wut/usr
+FAT_ROOT := $(DEVKITPRO)/wut/usr
 
 include $(WUT_ROOT)/share/wut_rules
 

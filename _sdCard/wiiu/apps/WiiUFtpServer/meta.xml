@@ -2,8 +2,8 @@
 <app version="1">
   <name>WiiUFtpServer</name>
   <coder>Laf111</coder>
-  <version>9.3.0</version>
-  <release_date>20220329204046</release_date>
+  <version>11.0.0</version>
+  <release_date>20220528172759</release_date>
   <short_description>A robust and optimized FTP server for the Wii-U!</short_description>
   <long_description><![CDATA[Based on FTP-everywhere server, this version fix :
   
